@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASCII.LENS — Reality in Characters</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=VT323&display=swap');
+
+  :root {
+    --green: #00ff41;
+    --green-dim: #00c032;
+    --green-glow: rgba(0,255,65,0.15);
+    --green-glow-strong: rgba(0,255,65,0.35);
+    --dark: #020c02;
+    --dark-2: #040f04;
+    --dark-3: #071207;
+    --panel: #050d05;
+    --border: #0a2a0a;
+    --text-dim: #3a6b3a;
+    --amber: #ffb300;
+    --red: #ff3b3b;
+    --cyan: #00e5ff;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--dark);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+  }
+
+  /* CRT scanlines overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* CRT vignette */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 9998;
+  }
+
+  .app {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    height: 100vh;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 12px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 1.3rem;
+    letter-spacing: 0.12em;
+    color: var(--green);
+    text-shadow: 0 0 20px var(--green-glow-strong), 0 0 40px var(--green-glow);
+  }
+
+  .logo span { color: var(--text-dim); font-weight: 400; }
+
+  .status-bar {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    display: inline-block;
+    margin-right: 5px;
+  }
+
+  .status-dot.live { background: var(--red); box-shadow: 0 0 8px var(--red); animation: pulse 1.2s infinite; }
+  .status-dot.ready { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── MAIN GRID ── */
+  .main {
+    display: grid;
+    grid-template-columns: 220px 1fr 220px;
+    gap: 10px;
+    padding: 10px 0;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* ── PANELS ── */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 12px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .panel-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── CONTROLS ── */
+  .control-group { margin-bottom: 16px; }
+
+  .control-label {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+  }
+
+  .control-label .val { color: var(--green); }
+
+  input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 2px;
+    background: var(--border);
+    border-radius: 0;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 10px; height: 10px;
+    background: var(--green);
+    border-radius: 0;
+    box-shadow: 0 0 8px var(--green);
+    cursor: pointer;
+  }
+
+  input[type="range"]:hover { background: #0a2a0a; }
+
+  .btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    padding: 7px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .btn:hover, .btn.active {
+    border-color: var(--green);
+    color: var(--green);
+    background: var(--green-glow);
+    box-shadow: inset 0 0 10px var(--green-glow);
+  }
+
+  .btn.primary {
+    border-color: var(--green);
+    color: var(--green);
+    text-align: center;
+    background: var(--green-glow);
+  }
+
+  .btn.primary:hover {
+    background: rgba(0,255,65,0.25);
+    box-shadow: 0 0 15px var(--green-glow-strong);
+  }
+
+  .btn.danger { border-color: #1a0a0a; color: #3a1a1a; }
+  .btn.danger:hover, .btn.danger.active {
+    border-color: var(--red);
+    color: var(--red);
+    background: rgba(255,59,59,0.1);
+  }
+
+  .btn.accent:hover, .btn.accent.active {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(0,229,255,0.08);
+  }
+
+  .mode-indicator {
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    margin-top: 8px;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+
+  .mode-indicator.live-mode {
+    color: var(--red);
+    border-color: var(--red);
+    animation: pulse 1.2s infinite;
+  }
+
+  /* ── CENTER: CANVAS AREA ── */
+  .center {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .canvas-wrapper {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: #010801;
+    min-height: 0;
+  }
+
+  /* Hidden video & canvas */
+  #video { display: none; }
+  #sourceCanvas { display: none; }
+
+  /* ASCII output */
+  #asciiOutput {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #asciiPre {
+    font-family: 'VT323', monospace;
+    font-size: 8px;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    white-space: pre;
+    color: var(--green);
+    text-shadow: 0 0 4px rgba(0,255,65,0.6);
+    transition: color 0.3s;
+    transform-origin: center;
+  }
+
+  .color-mode-amber #asciiPre { color: var(--amber); text-shadow: 0 0 4px rgba(255,179,0,0.6); }
+  .color-mode-cyan #asciiPre { color: var(--cyan); text-shadow: 0 0 4px rgba(0,229,255,0.6); }
+  .color-mode-white #asciiPre { color: #e0e0e0; text-shadow: none; }
+  .color-mode-color #asciiPre span { /* each char gets inline color */ }
+
+  /* Placeholder */
+  .placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--text-dim);
+  }
+
+  .placeholder-ascii {
+    font-family: 'VT323', monospace;
+    font-size: 10px;
+    line-height: 1;
+    white-space: pre;
+    color: #0a1e0a;
+    text-align: center;
+  }
+
+  .placeholder-text {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* toolbar below canvas */
+  .canvas-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0 0;
+  }
+
+  .canvas-toolbar .btn { padding: 5px 12px; font-size: 0.6rem; }
+
+  .fps-counter {
+    margin-left: auto;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    min-width: 80px;
+    text-align: right;
+  }
+
+  /* ── INFO PANEL ── */
+  .info-block {
+    margin-bottom: 14px;
+  }
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.6rem;
+    padding: 3px 0;
+    border-bottom: 1px solid #040f04;
+  }
+
+  .info-row .key { color: var(--text-dim); }
+  .info-row .value { color: var(--green); }
+
+  .charset-preview {
+    font-family: 'VT323', monospace;
+    font-size: 13px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+    word-break: break-all;
+    line-height: 1.4;
+    border: 1px solid var(--border);
+    padding: 6px;
+    background: var(--dark-2);
+    max-height: 50px;
+    overflow: hidden;
+  }
+
+  /* Upload zone */
+  .upload-zone {
+    border: 1px dashed var(--border);
+    padding: 16px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 10px;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .upload-zone:hover {
+    border-color: var(--green);
+    color: var(--green);
+    background: var(--green-glow);
+  }
+
+  .upload-zone.drag-over {
+    border-color: var(--green);
+    background: var(--green-glow);
+  }
+
+  #fileInput { display: none; }
+
+  /* Grid lines effect on canvas */
+  .canvas-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(rgba(0,255,65,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,65,0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  #asciiOutput { z-index: 2; }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+  }
+
+  .footer-key {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .key-badge {
+    background: var(--border);
+    padding: 1px 5px;
+    font-size: 0.55rem;
+    color: var(--green);
+    border: 1px solid #0f2f0f;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+
+  /* Select */
+  select {
+    background: var(--dark-2);
+    border: 1px solid var(--border);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    padding: 5px 8px;
+    width: 100%;
+    cursor: pointer;
+    outline: none;
+    margin-top: 4px;
+  }
+
+  select:hover { border-color: var(--green); }
+
+  /* Checkbox toggle */
+  .toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .toggle {
+    width: 28px; height: 14px;
+    background: var(--border);
+    border-radius: 0;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 10px; height: 10px;
+    background: var(--text-dim);
+    transition: all 0.2s;
+  }
+
+  .toggle.on { background: rgba(0,255,65,0.2); border: 1px solid var(--green); }
+  .toggle.on::after { left: 14px; background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  /* flicker animation on load */
+  @keyframes flicker {
+    0%,19%,21%,23%,25%,54%,56%,100% { opacity:1 }
+    20%,24%,55% { opacity:0.5 }
+  }
+
+  .logo { animation: flicker 8s infinite; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">ASCII<span>.</span>LENS</div>
+    <div class="status-bar">
+      <span><span class="status-dot" id="statusDot"></span><span id="statusText">IDLE</span></span>
+      <span id="resolutionInfo">— × —</span>
+      <span id="charCountInfo">0 CHARS</span>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- LEFT PANEL: SOURCE + CONTROLS -->
+    <div class="panel">
+      <div class="panel-title">// Source</div>
+
+      <!-- Upload -->
+      <div class="upload-zone" id="uploadZone">
+        <div>[ DRAG & DROP ]</div>
+        <div style="margin-top:4px; font-size:0.55rem;">or click to upload image</div>
+      </div>
+      <input type="file" id="fileInput" accept="image/*">
+
+      <div class="btn-group" style="margin-bottom:12px;">
+        <button class="btn primary" id="cameraBtn">▶ START CAMERA</button>
+        <button class="btn danger" id="stopBtn" style="display:none;">■ STOP CAMERA</button>
+      </div>
+
+      <div class="mode-indicator" id="modeIndicator">MODE: IDLE</div>
+
+      <div style="margin-top:14px;">
+        <div class="panel-title">// Render</div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>DENSITY (cols)</span>
+            <span class="val" id="densityVal">120</span>
+          </div>
+          <input type="range" id="densitySlider" min="40" max="300" value="120">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>FONT SIZE</span>
+            <span class="val" id="fontSizeVal">8px</span>
+          </div>
+          <input type="range" id="fontSizeSlider" min="4" max="16" value="8">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>CONTRAST</span>
+            <span class="val" id="contrastVal">1.0×</span>
+          </div>
+          <input type="range" id="contrastSlider" min="50" max="300" value="100">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>BRIGHTNESS</span>
+            <span class="val" id="brightnessVal">1.0×</span>
+          </div>
+          <input type="range" id="brightnessSlider" min="50" max="200" value="100">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>INVERT</span>
+          </div>
+          <div class="toggle-row">
+            <span>Dark chars on light bg</span>
+            <div class="toggle" id="invertToggle"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER: ASCII OUTPUT -->
+    <div class="center">
+      <div class="canvas-wrapper" id="canvasWrapper">
+        <div class="placeholder" id="placeholder">
+          <div class="placeholder-ascii">
+██████████████████████████████
+█  ░░░░ ▒▒▒▒ ▓▓▓▓ ████ ░░░░ █
+█  ▒▒▒▒ ▓▓▓▓ ████ ░░░░ ▒▒▒▒ █
+█  ▓▓▓▓ ████ ░░░░ ▒▒▒▒ ▓▓▓▓ █
+██████████████████████████████</div>
+          <div class="placeholder-text">upload image or start camera</div>
+        </div>
+        <div id="asciiOutput">
+          <pre id="asciiPre"></pre>
+        </div>
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="sourceCanvas"></canvas>
+      </div>
+
+      <div class="canvas-toolbar">
+        <button class="btn accent" id="downloadBtn">↓ DOWNLOAD .TXT</button>
+        <button class="btn accent" id="downloadImgBtn">↓ DOWNLOAD PNG</button>
+        <button class="btn" id="snapshotBtn">◉ SNAPSHOT</button>
+        <div class="fps-counter" id="fpsCounter">— FPS</div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: COLOR + CHARSET + INFO -->
+    <div class="panel">
+      <div class="panel-title">// Color Mode</div>
+      <div class="btn-group" style="margin-bottom:12px;">
+        <button class="btn active" data-color="green">● GREEN [CRT]</button>
+        <button class="btn" data-color="amber">● AMBER [RETRO]</button>
+        <button class="btn" data-color="cyan">● CYAN [ICE]</button>
+        <button class="btn" data-color="white">● WHITE [CLEAN]</button>
+        <button class="btn" data-color="color">◈ FULL COLOR</button>
+      </div>
+
+      <div class="panel-title">// Charset</div>
+      <div class="btn-group" style="margin-bottom:6px;" id="charsetBtns">
+        <button class="btn active" data-charset="standard">STANDARD</button>
+        <button class="btn" data-charset="dense">DENSE</button>
+        <button class="btn" data-charset="minimal">MINIMAL</button>
+        <button class="btn" data-charset="blocks">BLOCKS ▓</button>
+        <button class="btn" data-charset="binary">BINARY 01</button>
+        <button class="btn" data-charset="matrix">MATRIX カ</button>
+      </div>
+      <div class="charset-preview" id="charsetPreview"></div>
+
+      <div style="margin-top:14px;">
+        <div class="panel-title">// Stats</div>
+        <div class="info-block">
+          <div class="info-row"><span class="key">COLS</span><span class="value" id="statCols">—</span></div>
+          <div class="info-row"><span class="key">ROWS</span><span class="value" id="statRows">—</span></div>
+          <div class="info-row"><span class="key">CHARS/FRAME</span><span class="value" id="statChars">—</span></div>
+          <div class="info-row"><span class="key">FPS</span><span class="value" id="statFps">—</span></div>
+          <div class="info-row"><span class="key">SOURCE</span><span class="value" id="statSource">IDLE</span></div>
+          <div class="info-row"><span class="key">COLOR</span><span class="value" id="statColor">GREEN</span></div>
+        </div>
+      </div>
+
+      <div style="margin-top:8px;">
+        <div class="panel-title">// Options</div>
+        <div class="toggle-row">
+          <span>Mirror camera</span>
+          <div class="toggle on" id="mirrorToggle"></div>
+        </div>
+        <div class="toggle-row">
+          <span>Glow effect</span>
+          <div class="toggle on" id="glowToggle"></div>
+        </div>
+        <div class="toggle-row">
+          <span>Auto-contrast</span>
+          <div class="toggle" id="autoContrastToggle"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-key"><span class="key-badge">U</span> Upload</div>
+    <div class="footer-key"><span class="key-badge">C</span> Camera</div>
+    <div class="footer-key"><span class="key-badge">S</span> Snapshot</div>
+    <div class="footer-key"><span class="key-badge">D</span> Download TXT</div>
+    <div class="footer-key"><span class="key-badge">I</span> Invert</div>
+    <div class="footer-key"><span class="key-badge">±</span> Density</div>
+    <div style="margin-left:auto; color: #0a2a0a;">
+      PIXEL → INTENSITY → CHARACTER → RENDER
+    </div>
+  </footer>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// ASCII ENGINE
+// ═══════════════════════════════════════════════════
+
+const CHARSETS = {
+  standard: ' .\'`^",:;Il!i><~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
+  dense:    ' .:-=+*#%@█',
+  minimal:  ' .-+*#@',
+  blocks:   ' ░▒▓█',
+  binary:   ' 01',
+  matrix:   ' ｦｧｨｩｪｫｬｭｮｯｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ01'
+};
+
+let state = {
+  mode: 'idle', // idle | image | camera
+  charset: 'standard',
+  colorMode: 'green',
+  cols: 120,
+  fontSize: 8,
+  contrast: 1.0,
+  brightness: 1.0,
+  invert: false,
+  mirror: true,
+  glow: true,
+  autoContrast: false,
+  animFrameId: null,
+  imageEl: null,
+  stream: null,
+  lastFrameTime: 0,
+  fps: 0,
+  fpsHistory: [],
+};
+
+const video = document.getElementById('video');
+const sourceCanvas = document.getElementById('sourceCanvas');
+const ctx = sourceCanvas.getContext('2d', { willReadFrequently: true });
+const asciiPre = document.getElementById('asciiPre');
+const placeholder = document.getElementById('placeholder');
+
+// ── Pixel → ASCII ──
+function intensityToChar(intensity, charset) {
+  const chars = CHARSETS[charset];
+  const idx = Math.floor((intensity / 255) * (chars.length - 1));
+  return chars[idx];
+}
+
+function rgbToIntensity(r, g, b) {
+  return 0.299 * r + 0.587 * g + 0.114 * b;
+}
+
+function applyContrast(val, contrast) {
+  return Math.min(255, Math.max(0, (val - 128) * contrast + 128));
+}
+
+function applyBrightness(val, brightness) {
+  return Math.min(255, Math.max(0, val * brightness));
+}
+
+function renderFrame(source) {
+  const cols = state.cols;
+  const charW = state.fontSize * 0.6; // monospace approx ratio
+  const charH = state.fontSize;
+  const outputEl = document.getElementById('asciiOutput');
+  const wrapperW = outputEl.offsetWidth;
+  const wrapperH = outputEl.offsetHeight;
+
+  // Compute rows based on aspect ratio
+  let srcW, srcH;
+  if (source.videoWidth) { srcW = source.videoWidth; srcH = source.videoHeight; }
+  else { srcW = source.naturalWidth || source.width; srcH = source.naturalHeight || source.height; }
+
+  const aspectRatio = srcH / srcW;
+  const rows = Math.floor(cols * aspectRatio * (charW / charH));
+
+  sourceCanvas.width = cols;
+  sourceCanvas.height = rows;
+
+  ctx.save();
+  if (state.mirror && state.mode === 'camera') {
+    ctx.translate(cols, 0);
+    ctx.scale(-1, 1);
+  }
+  if (state.brightness !== 1.0 || state.contrast !== 1.0) {
+    ctx.filter = `contrast(${state.contrast}) brightness(${state.brightness})`;
+  }
+  ctx.drawImage(source, 0, 0, cols, rows);
+  ctx.restore();
+
+  const imageData = ctx.getImageData(0, 0, cols, rows);
+  const data = imageData.data;
+
+  // Auto contrast: scan min/max
+  let minI = 255, maxI = 0;
+  if (state.autoContrast) {
+    for (let i = 0; i < data.length; i += 4) {
+      const intensity = rgbToIntensity(data[i], data[i+1], data[i+2]);
+      if (intensity < minI) minI = intensity;
+      if (intensity > maxI) maxI = intensity;
+    }
+  }
+
+  const isColor = state.colorMode === 'color';
+  let output = '';
+  const colorSpans = [];
+
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const idx = (y * cols + x) * 4;
+      let r = data[idx], g = data[idx+1], b = data[idx+2];
+      let intensity = rgbToIntensity(r, g, b);
+
+      if (state.autoContrast && maxI > minI) {
+        intensity = ((intensity - minI) / (maxI - minI)) * 255;
+      }
+
+      if (state.invert) intensity = 255 - intensity;
+
+      const ch = intensityToChar(intensity, state.charset);
+
+      if (isColor) {
+        colorSpans.push({ ch, r, g, b });
+        output += '\u0000'; // placeholder
+      } else {
+        output += ch;
+      }
+    }
+    output += '\n';
+  }
+
+  asciiPre.style.fontSize = state.fontSize + 'px';
+  asciiPre.style.lineHeight = '1';
+  asciiPre.style.letterSpacing = '0.04em';
+
+  if (!state.glow) {
+    asciiPre.style.textShadow = 'none';
+  } else {
+    const glowColor = { green:'rgba(0,255,65,0.5)', amber:'rgba(255,179,0,0.5)', cyan:'rgba(0,229,255,0.5)', white:'transparent', color:'transparent' }[state.colorMode];
+    asciiPre.style.textShadow = `0 0 4px ${glowColor}`;
+  }
+
+  if (isColor) {
+    let html = '';
+    let ci = 0;
+    for (let i = 0; i < output.length; i++) {
+      if (output[i] === '\u0000') {
+        const {ch, r, g, b} = colorSpans[ci++];
+        html += `<span style="color:rgb(${r},${g},${b})">${ch === '<' ? '&lt;' : ch === '>' ? '&gt;' : ch === '&' ? '&amp;' : ch}</span>`;
+      } else {
+        html += output[i];
+      }
+    }
+    asciiPre.innerHTML = html;
+  } else {
+    asciiPre.textContent = output;
+  }
+
+  // Stats
+  document.getElementById('statCols').textContent = cols;
+  document.getElementById('statRows').textContent = rows;
+  document.getElementById('statChars').textContent = (cols * rows).toLocaleString();
+  document.getElementById('resolutionInfo').textContent = `${cols} × ${rows}`;
+  document.getElementById('charCountInfo').textContent = (cols * rows).toLocaleString() + ' CHARS';
+
+  return output;
+}
+
+// ── FPS ──
+function updateFPS() {
+  const now = performance.now();
+  if (state.lastFrameTime) {
+    const delta = now - state.lastFrameTime;
+    const fps = 1000 / delta;
+    state.fpsHistory.push(fps);
+    if (state.fpsHistory.length > 10) state.fpsHistory.shift();
+    const avg = state.fpsHistory.reduce((a,b)=>a+b,0) / state.fpsHistory.length;
+    state.fps = avg;
+    document.getElementById('fpsCounter').textContent = avg.toFixed(1) + ' FPS';
+    document.getElementById('statFps').textContent = avg.toFixed(1);
+  }
+  state.lastFrameTime = now;
+}
+
+// ── Camera Loop ──
+function cameraLoop() {
+  if (state.mode !== 'camera') return;
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    renderFrame(video);
+    updateFPS();
+  }
+  state.animFrameId = requestAnimationFrame(cameraLoop);
+}
+
+// ── Start Camera ──
+async function startCamera() {
+  try {
+    state.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+    video.srcObject = state.stream;
+    video.play();
+    state.mode = 'camera';
+    placeholder.style.display = 'none';
+    document.getElementById('cameraBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display = 'block';
+    setStatus('live');
+    document.getElementById('modeIndicator').textContent = 'MODE: LIVE CAMERA';
+    document.getElementById('modeIndicator').className = 'mode-indicator live-mode';
+    document.getElementById('statSource').textContent = 'CAMERA';
+    cameraLoop();
+  } catch (e) {
+    alert('Camera access denied or unavailable.');
+  }
+}
+
+function stopCamera() {
+  if (state.stream) {
+    state.stream.getTracks().forEach(t => t.stop());
+    state.stream = null;
+  }
+  if (state.animFrameId) cancelAnimationFrame(state.animFrameId);
+  state.mode = state.imageEl ? 'image' : 'idle';
+  document.getElementById('cameraBtn').style.display = 'block';
+  document.getElementById('stopBtn').style.display = 'none';
+
+  if (state.imageEl) {
+    renderFrame(state.imageEl);
+    setStatus('ready');
+    document.getElementById('modeIndicator').textContent = 'MODE: IMAGE';
+    document.getElementById('modeIndicator').className = 'mode-indicator';
+    document.getElementById('statSource').textContent = 'IMAGE';
+  } else {
+    setStatus('idle');
+    document.getElementById('modeIndicator').textContent = 'MODE: IDLE';
+    document.getElementById('modeIndicator').className = 'mode-indicator';
+    placeholder.style.display = 'flex';
+    asciiPre.textContent = '';
+    document.getElementById('statSource').textContent = 'IDLE';
+  }
+  document.getElementById('fpsCounter').textContent = '— FPS';
+  document.getElementById('statFps').textContent = '—';
+}
+
+// ── Load Image ──
+function loadImage(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      state.imageEl = img;
+      if (state.mode === 'camera') stopCamera();
+      state.mode = 'image';
+      placeholder.style.display = 'none';
+      renderFrame(img);
+      setStatus('ready');
+      document.getElementById('modeIndicator').textContent = 'MODE: IMAGE';
+      document.getElementById('modeIndicator').className = 'mode-indicator';
+      document.getElementById('statSource').textContent = 'IMAGE';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Status ──
+function setStatus(s) {
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  dot.className = 'status-dot';
+  if (s === 'live') { dot.classList.add('live'); text.textContent = 'LIVE'; }
+  else if (s === 'ready') { dot.classList.add('ready'); text.textContent = 'READY'; }
+  else { text.textContent = 'IDLE'; }
+}
+
+// ── Download TXT ──
+function downloadTxt() {
+  const text = asciiPre.textContent;
+  if (!text) return;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a = document.createElement('a'); 
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ascii-art.txt';
+  a.click();
+}
+
+// ── Download PNG ──
+function downloadPng() {
+  const pre = document.getElementById('asciiPre');
+  if (!pre.textContent) return;
+
+  // Render to canvas
+  const lines = pre.textContent.split('\n');
+  const fontSize = state.fontSize;
+  const lineH = fontSize;
+  const charW = fontSize * 0.6;
+  const cols = lines[0]?.length || 0;
+  const rows = lines.length;
+
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = cols * charW;
+  offCanvas.height = rows * lineH;
+  const offCtx = offCanvas.getContext('2d');
+  offCtx.fillStyle = '#010801';
+  offCtx.fillRect(0, 0, offCanvas.width, offCanvas.height);
+
+  const colorMap = { green: '#00ff41', amber: '#ffb300', cyan: '#00e5ff', white: '#e0e0e0', color: '#00ff41' };
+  offCtx.fillStyle = colorMap[state.colorMode] || '#00ff41';
+  offCtx.font = `${fontSize}px "VT323", monospace`;
+  offCtx.textBaseline = 'top';
+
+  lines.forEach((line, y) => {
+    offCtx.fillText(line, 0, y * lineH);
+  });
+
+  const a = document.createElement('a');
+  a.href = offCanvas.toDataURL('image/png');
+  a.download = 'ascii-art.png';
+  a.click();
+}
+
+// ── Snapshot (freeze camera) ──
+function snapshot() {
+  if (state.mode !== 'camera') return;
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = video.videoWidth;
+  offCanvas.height = video.videoHeight;
+  const offCtx = offCanvas.getContext('2d');
+  offCtx.drawImage(video, 0, 0);
+  const img = new Image();
+  img.onload = () => {
+    state.imageEl = img;
+    stopCamera();
+    state.mode = 'image';
+    renderFrame(img);
+    setStatus('ready');
+    document.getElementById('modeIndicator').textContent = 'MODE: SNAPSHOT';
+    document.getElementById('modeIndicator').className = 'mode-indicator';
+    document.getElementById('statSource').textContent = 'SNAPSHOT';
+  };
+  img.src = offCanvas.toDataURL();
+}
+
+// ── Re-render helper ──
+function rerender() {
+  if (state.mode === 'image' && state.imageEl) renderFrame(state.imageEl);
+}
+
+// ═══════════════════════════════════════════════════
+// UI BINDINGS
+// ═══════════════════════════════════════════════════
+
+// Camera
+document.getElementById('cameraBtn').addEventListener('click', startCamera);
+document.getElementById('stopBtn').addEventListener('click', stopCamera);
+
+// File upload
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+
+uploadZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadImage(e.target.files[0]); });
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) loadImage(file);
+});
+
+// Density
+const densitySlider = document.getElementById('densitySlider');
+densitySlider.addEventListener('input', () => {
+  state.cols = +densitySlider.value;
+  document.getElementById('densityVal').textContent = state.cols;
+  rerender();
+});
+
+// Font size
+const fontSizeSlider = document.getElementById('fontSizeSlider');
+fontSizeSlider.addEventListener('input', () => {
+  state.fontSize = +fontSizeSlider.value;
+  document.getElementById('fontSizeVal').textContent = state.fontSize + 'px';
+  rerender();
+});
+
+// Contrast
+const contrastSlider = document.getElementById('contrastSlider');
+contrastSlider.addEventListener('input', () => {
+  state.contrast = +contrastSlider.value / 100;
+  document.getElementById('contrastVal').textContent = state.contrast.toFixed(1) + '×';
+  rerender();
+});
+
+// Brightness
+const brightnessSlider = document.getElementById('brightnessSlider');
+brightnessSlider.addEventListener('input', () => {
+  state.brightness = +brightnessSlider.value / 100;
+  document.getElementById('brightnessVal').textContent = state.brightness.toFixed(1) + '×';
+  rerender();
+});
+
+// Invert toggle
+const invertToggle = document.getElementById('invertToggle');
+invertToggle.addEventListener('click', () => {
+  state.invert = !state.invert;
+  invertToggle.classList.toggle('on', state.invert);
+  rerender();
+});
+
+// Mirror toggle
+const mirrorToggle = document.getElementById('mirrorToggle');
+mirrorToggle.classList.add('on');
+mirrorToggle.addEventListener('click', () => {
+  state.mirror = !state.mirror;
+  mirrorToggle.classList.toggle('on', state.mirror);
+  rerender();
+});
+
+// Glow toggle
+const glowToggle = document.getElementById('glowToggle');
+glowToggle.classList.add('on');
+glowToggle.addEventListener('click', () => {
+  state.glow = !state.glow;
+  glowToggle.classList.toggle('on', state.glow);
+  rerender();
+});
+
+// Auto-contrast toggle
+const autoContrastToggle = document.getElementById('autoContrastToggle');
+autoContrastToggle.addEventListener('click', () => {
+  state.autoContrast = !state.autoContrast;
+  autoContrastToggle.classList.toggle('on', state.autoContrast);
+  rerender();
+});
+
+// Color mode buttons
+document.querySelectorAll('[data-color]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-color]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.colorMode = btn.dataset.color;
+    const wrapper = document.getElementById('canvasWrapper');
+    wrapper.className = 'canvas-wrapper color-mode-' + state.colorMode;
+    document.getElementById('statColor').textContent = state.colorMode.toUpperCase();
+    rerender();
+  });
+});
+
+// Charset buttons
+document.querySelectorAll('[data-charset]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-charset]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.charset = btn.dataset.charset;
+    document.getElementById('charsetPreview').textContent = CHARSETS[state.charset];
+    rerender();
+  });
+});
+
+// Initialize charset preview
+document.getElementById('charsetPreview').textContent = CHARSETS['standard'];
+
+// Downloads
+document.getElementById('downloadBtn').addEventListener('click', downloadTxt);
+document.getElementById('downloadImgBtn').addEventListener('click', downloadPng);
+document.getElementById('snapshotBtn').addEventListener('click', snapshot);
+
+// ── Keyboard shortcuts ──
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  switch(e.key.toLowerCase()) {
+    case 'u': fileInput.click(); break;
+    case 'c': if (state.mode !== 'camera') startCamera(); else stopCamera(); break;
+    case 's': snapshot(); break;
+    case 'd': downloadTxt(); break;
+    case 'i':
+      state.invert = !state.invert;
+      invertToggle.classList.toggle('on', state.invert);
+      rerender();
+      break;
+    case '+': case '=':
+      state.cols = Math.min(300, state.cols + 10);
+      densitySlider.value = state.cols;
+      document.getElementById('densityVal').textContent = state.cols;
+      rerender();
+      break;
+    case '-':
+      state.cols = Math.max(40, state.cols - 10);
+      densitySlider.value = state.cols;
+      document.getElementById('densityVal').textContent = state.cols;
+      rerender();
+      break;
+  }
+});
+</script>
+</body>
+</html>
